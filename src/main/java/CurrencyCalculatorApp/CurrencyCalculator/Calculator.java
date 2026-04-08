@@ -1,11 +1,10 @@
-package WeahrungsrechnerAPP.Waehrungsrechner;
+package CurrencyCalculatorApp.CurrencyCalculator;
 
-public class Rechner implements WeahrungsrechnerAPP.Waehrungsrechner.Calculate {
+public class Calculator implements Calculate{
     Currency[] currencies;
     int currencyCount = 0;
 
-
-    public Rechner() {
+    public Calculator() {
         initializeBaseCurrencies();
     }
 
@@ -59,20 +58,15 @@ public class Rechner implements WeahrungsrechnerAPP.Waehrungsrechner.Calculate {
             if (fromCurrency.equals(currencies[i].getName()) || toCurrency.equals(currencies[i].getName())) {
                 if (fromCurrency.equals(currencies[i].getName())) {
                     fromRate = currencies[i].getCurrencyRate();
-                    if (foundRates > 0) {
-                        break;
-                    }
-                    foundRates++;
                 }else{
                     toRate = currencies[i].getCurrencyRate();
-                    if (foundRates > 0) {
-                        break;
-                    }
-                    foundRates++;
                 }
+                if (foundRates > 0) {
+                    break;
+                }
+                foundRates++;
             }
         }
         return amount * fromRate / toRate;
     }
-
 }

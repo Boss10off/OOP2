@@ -1,4 +1,4 @@
-package WeahrungsrechnerAPP.Waehrungsrechner;
+package CurrencyCalculatorApp.CurrencyCalculator;
 
 public class Currency {
     String name;

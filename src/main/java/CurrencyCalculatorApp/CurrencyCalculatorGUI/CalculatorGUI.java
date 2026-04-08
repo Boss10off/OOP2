@@ -1,6 +1,7 @@
-package WeahrungsrechnerAPP.WaehrungsrechnerUI;
+package CurrencyCalculatorApp.CurrencyCalculatorGUI;
 
-import WeahrungsrechnerAPP.Waehrungsrechner.Rechner;
+
+import CurrencyCalculatorApp.CurrencyCalculator.*;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
@@ -8,20 +9,39 @@ import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.awt.event.ActionListener;
 
-public class RechnerGUI extends JFrame {
-    private Rechner rechner;
+public class CalculatorGUI extends JFrame {
+    private Calculate currentCalculator;
+    private final Calculator dynamicCalculator;
+
     private JComboBox<String> fromBox, toBox;
     private JTextField inputField;
     private JLabel resultLabel;
+    private JRadioButton enumToggle;
 
     // --- GUI Constructor ---
-    public RechnerGUI() {
-        rechner = new Rechner();
+    public CalculatorGUI() {
+        dynamicCalculator = new Calculator();
+        currentCalculator = dynamicCalculator; // Start with the class version
 
-        setTitle("Live Converter");
+        setTitle("Currency Converter - Implementation Switcher");
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setSize(450, 250);
-        setLayout(new GridLayout(4, 1, 10, 10)); // Grid for clean rows
+        setSize(450, 300);
+        setLayout(new GridLayout(5, 1, 10, 10));
+
+        // Row 0: Implementation Switcher
+        JPanel togglePanel = new JPanel();
+        enumToggle = new JRadioButton("Use Fixed Enum Mode (No 'Add' allowed)");
+        enumToggle.addActionListener(e -> {
+            if (enumToggle.isSelected()) {
+                // Switch to Enum constant (using EURO as the entry point for the logic)
+                currentCalculator = BaseCurrencyEnum.EURO;
+            } else {
+                currentCalculator = dynamicCalculator;
+            }
+            updateDropdownModels();
+            updateResult();
+        });
+        togglePanel.add(enumToggle);
 
         // Row 1: Dropdowns
         JPanel dropPanel = new JPanel(new GridLayout(1, 2, 10, 0));
@@ -31,25 +51,17 @@ public class RechnerGUI extends JFrame {
         dropPanel.add(fromBox);
         dropPanel.add(toBox);
 
-        // Row 2: Labels
-        JPanel labelPanel = new JPanel(new GridLayout(1, 2));
-        labelPanel.add(new JLabel("Amount:", SwingConstants.CENTER));
-        labelPanel.add(new JLabel("Converted Value:", SwingConstants.CENTER));
-
         // Row 3: Input and Result
         JPanel ioPanel = new JPanel(new GridLayout(1, 2, 10, 0));
         inputField = new JTextField("1.0");
-        inputField.setFont(new Font("SansSerif", Font.BOLD, 16));
         resultLabel = new JLabel("---", SwingConstants.CENTER);
-        resultLabel.setFont(new Font("SansSerif", Font.BOLD, 16));
-        resultLabel.setForeground(new Color(0, 102, 204));
         ioPanel.add(inputField);
         ioPanel.add(resultLabel);
 
-        // --- Event Listeners ---
+        // --- Listeners ---
         ActionListener comboListener = e -> {
-            JComboBox cb = (JComboBox) e.getSource();
-            if ("+ Add New...".equals(cb.getSelectedItem())) {
+            String selected = (String) ((JComboBox) e.getSource()).getSelectedItem();
+            if ("+ Add New...".equals(selected)) {
                 openAddCurrencyDialog();
             } else {
                 updateResult();
@@ -65,10 +77,9 @@ public class RechnerGUI extends JFrame {
             public void changedUpdate(DocumentEvent e) { updateResult(); }
         });
 
-        // Add to Frame
+        add(togglePanel);
         add(new JLabel("Select Currencies:", SwingConstants.CENTER));
         add(dropPanel);
-        add(labelPanel);
         add(ioPanel);
 
         setLocationRelativeTo(null);
@@ -82,29 +93,53 @@ public class RechnerGUI extends JFrame {
             String from = (String) fromBox.getSelectedItem();
             String to = (String) toBox.getSelectedItem();
 
-            if (from != null && to != null && !from.contains("+") && !to.contains("+")) {
-                double res = rechner.calculate(from, to, amount);
+            if (from != null && to != null && !from.contains("+")) {
+                // This call works for BOTH the class and the enum now
+                double res = currentCalculator.calculate(from, to, amount);
                 resultLabel.setText(String.format("%.2f", res));
             }
-        } catch (NumberFormatException e) {
-            resultLabel.setText("Invalid Input");
+        } catch (Exception e) {
+            resultLabel.setText("---");
         }
     }
 
     private void updateDropdownModels() {
-        String[] names = rechner.getCurrencyNames();
-        String[] modelData = new String[names.length + 1];
-        System.arraycopy(names, 0, modelData, 0, names.length);
-        modelData[names.length] = "+ Add New...";
+        String[] names;
+        boolean allowAdd = true;
 
-        fromBox.setModel(new DefaultComboBoxModel<>(modelData));
-        toBox.setModel(new DefaultComboBoxModel<>(modelData));
+        if (currentCalculator instanceof BaseCurrencyEnum) {
+            // Get names from Enum
+            BaseCurrencyEnum[] enums = BaseCurrencyEnum.values();
+            names = new String[enums.length];
+            for (int i = 0; i < enums.length; i++) names[i] = enums[i].getName();
+            allowAdd = false; // Disable adding for Enum
+        } else {
+            // Get names from the original Calculator class
+            names = dynamicCalculator.getCurrencyNames();
+        }
 
+        DefaultComboBoxModel<String> modelFrom = new DefaultComboBoxModel<>(names);
+        DefaultComboBoxModel<String> modelTo = new DefaultComboBoxModel<>(names);
+
+        if (allowAdd) {
+            modelFrom.addElement("+ Add New...");
+            modelTo.addElement("+ Add New...");
+        }
+
+        fromBox.setModel(modelFrom);
+        toBox.setModel(modelTo);
         fromBox.setSelectedIndex(0);
         toBox.setSelectedIndex(1);
     }
 
     private void openAddCurrencyDialog() {
+        // Double check: if someone clicks it while in Enum mode (shouldn't happen)
+        if (currentCalculator instanceof BaseCurrencyEnum) {
+            JOptionPane.showMessageDialog(this, "Adding is disabled in Enum Mode!");
+            updateDropdownModels();
+            return;
+        }
+
         JDialog dialog = new JDialog(this, "Add New Currency", true);
         dialog.setLayout(new GridLayout(4, 2, 10, 10));
 
@@ -113,7 +148,7 @@ public class RechnerGUI extends JFrame {
 
         // Dropdown for the "Relative To" currency
         // We use the existing names from the rechner
-        JComboBox<String> relativeToBox = new JComboBox<>(rechner.getCurrencyNames());
+        JComboBox<String> relativeToBox = new JComboBox<>(dynamicCalculator.getCurrencyNames());
 
         JButton okBtn = new JButton("Add");
         JButton cancelBtn = new JButton("Cancel");
@@ -138,7 +173,7 @@ public class RechnerGUI extends JFrame {
                     return;
                 }
 
-                if (rechner.checkIfNewName(name)) {
+                if (dynamicCalculator.checkIfNewName(name)) {
                     JOptionPane.showMessageDialog(dialog, "This currency already exists!");
                     return;
                 }
@@ -150,7 +185,7 @@ public class RechnerGUI extends JFrame {
                     return;
                 }
                 // Call the updated logic
-                rechner.createNewCurrency(name, rate, relativeTo);
+                dynamicCalculator.createNewCurrency(name, rate, relativeTo);
 
                 // Refresh main GUI dropdowns
                 updateDropdownModels();
@@ -162,7 +197,7 @@ public class RechnerGUI extends JFrame {
             }
         });
 
-        cancelBtn.addActionListener(e -> {
+        cancelBtn.addActionListener(_ -> {
             // Reset main boxes so they don't stay on "+ Add New..."
             fromBox.setSelectedIndex(0);
             toBox.setSelectedIndex(1);
