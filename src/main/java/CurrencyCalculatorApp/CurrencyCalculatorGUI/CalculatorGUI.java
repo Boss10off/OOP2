@@ -1,6 +1,5 @@
 package CurrencyCalculatorApp.CurrencyCalculatorGUI;
 
-
 import CurrencyCalculatorApp.CurrencyCalculator.*;
 
 import javax.swing.*;
