@@ -7,6 +7,8 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.awt.event.ActionListener;
+import java.util.*;
+import java.util.List;
 
 public class CalculatorGUI extends JFrame {
     private Calculate currentCalculator;
@@ -103,19 +105,24 @@ public class CalculatorGUI extends JFrame {
     }
 
     private void updateDropdownModels() {
-        String[] names;
+        List<String> nameList;
         boolean allowAdd = true;
 
         if (currentCalculator instanceof BaseCurrencyEnum) {
             // Get names from Enum
             BaseCurrencyEnum[] enums = BaseCurrencyEnum.values();
-            names = new String[enums.length];
-            for (int i = 0; i < enums.length; i++) names[i] = enums[i].getName();
+            nameList = new ArrayList<>();
+            for (BaseCurrencyEnum currency : enums) {
+                nameList.add(currency.getName());
+            }
+//            for (int i = 0; i < enums.length; i++) names[i] = enums[i].getName();
             allowAdd = false; // Disable adding for Enum
         } else {
             // Get names from the original Calculator class
-            names = dynamicCalculator.getCurrencyNames();
+            nameList = dynamicCalculator.getCurrencyNames();
         }
+
+        String[] names = nameList.toArray(new String[0]);
 
         DefaultComboBoxModel<String> modelFrom = new DefaultComboBoxModel<>(names);
         DefaultComboBoxModel<String> modelTo = new DefaultComboBoxModel<>(names);
@@ -128,7 +135,9 @@ public class CalculatorGUI extends JFrame {
         fromBox.setModel(modelFrom);
         toBox.setModel(modelTo);
         fromBox.setSelectedIndex(0);
-        toBox.setSelectedIndex(1);
+        if (modelTo.getSize() > 1) {
+            toBox.setSelectedIndex(1);
+        }
     }
 
     private void openAddCurrencyDialog() {
@@ -147,7 +156,7 @@ public class CalculatorGUI extends JFrame {
 
         // Dropdown for the "Relative To" currency
         // We use the existing names from the rechner
-        JComboBox<String> relativeToBox = new JComboBox<>(dynamicCalculator.getCurrencyNames());
+        JComboBox<String> relativeToBox = new JComboBox<>(dynamicCalculator.getCurrencyNames().toArray(new String[0]));
 
         JButton okBtn = new JButton("Add");
         JButton cancelBtn = new JButton("Cancel");
